@@ -1,8 +1,6 @@
 import {
-  ethereumAlchemy,
-  baseAlchemy,
-  polygonAlchemy,
-} from '../config/alchemy.js';
+  networks,
+} from '../config/networks.js';
 
 import type {
   PortfolioData,
@@ -17,19 +15,18 @@ import {
   tokenPriceMap,
 } from './token-price-map.js';
 
-type BlockchainClient =
-  typeof ethereumAlchemy;
 
 /**
  * Convert raw blockchain token balance
- * into a human-readable token balance.
+ * into a human-readable balance.
  *
  * Example:
  *
  * Raw balance: 2500000000
  * Decimals: 6
  *
- * Result: 2500
+ * Result:
+ * 2500
  */
 function formatTokenBalance(
   rawBalance: string,
@@ -50,23 +47,28 @@ function formatTokenBalance(
   const fractionalString =
     fractionalPart
       .toString()
-      .padStart(decimals, '0');
+      .padStart(
+        decimals,
+        '0',
+      );
 
   return Number(
     `${wholePart}.${fractionalString}`,
   );
 }
 
+
 /**
- * Get all assets from one blockchain network.
+ * Fetch all assets from one blockchain network.
  */
 async function getChainAssets(
-  client: BlockchainClient,
+  client: typeof networks[number]['client'],
   networkName: string,
   nativeSymbol: string,
   address: string,
 ): Promise<PortfolioAsset[]> {
   const assets: PortfolioAsset[] = [];
+
 
   /*
    * 1. Get native token balance
@@ -77,12 +79,15 @@ async function getChainAssets(
    */
 
   const nativeBalance =
-    await client.core.getBalance(address);
+    await client.core.getBalance(
+      address,
+    );
 
   const nativeBalanceFormatted =
     Number(
       nativeBalance.toString(),
     ) / 1e18;
+
 
   if (
     nativeBalanceFormatted > 0
@@ -116,6 +121,7 @@ async function getChainAssets(
     });
   }
 
+
   /*
    * 2. Get ERC-20 token balances
    */
@@ -125,44 +131,65 @@ async function getChainAssets(
       address,
     );
 
+
   /*
-   * 3. Remove tokens with zero/null balance
+   * 3. Filter out tokens with no balance
+   *
+   * We explicitly check the type of
+   * tokenBalance to avoid TypeScript
+   * implicit any/null errors.
    */
 
   const tokenBalances =
     balances.tokenBalances.filter(
-      (
-        token,
-      ): token is typeof token & {
-        tokenBalance: string;
-      } =>
+      (token) =>
         typeof token.tokenBalance ===
           'string' &&
         token.tokenBalance !==
           '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
 
+
   /*
-   * 4. Get metadata for each token
+   * 4. Fetch metadata for every token
    */
 
   for (
     const token of tokenBalances
   ) {
+    /*
+     * TypeScript safety check.
+     *
+     * Alchemy can technically return
+     * tokenBalance as null.
+     */
+
+    if (
+      typeof token.tokenBalance !==
+      'string'
+    ) {
+      continue;
+    }
+
+
     try {
       const metadata =
         await client.core.getTokenMetadata(
           token.contractAddress,
         );
 
+
       const decimals =
-        metadata.decimals ?? 18;
+        metadata.decimals ??
+        18;
+
 
       const balance =
         formatTokenBalance(
           token.tokenBalance,
           decimals,
         );
+
 
       assets.push({
         id:
@@ -190,7 +217,9 @@ async function getChainAssets(
         change24h:
           0,
       });
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         `Failed to fetch metadata for ${token.contractAddress}`,
         error,
@@ -198,63 +227,70 @@ async function getChainAssets(
     }
   }
 
+
   return assets;
 }
 
+
 /**
- * Get the complete multi-chain portfolio.
+ * Fetch the complete portfolio
+ * across all configured networks.
  */
 export async function getPortfolio(
   address: string,
 ): Promise<PortfolioData> {
+
+
   /*
-   * 1. Fetch Ethereum assets
+   * 1. Fetch assets from all networks
+   *
+   * Promise.all() allows Ethereum,
+   * Base, and Polygon to be queried
+   * concurrently.
    */
 
-  const ethereumAssets =
-    await getChainAssets(
-      ethereumAlchemy,
-      'Ethereum',
-      'ETH',
-      address,
+  const chainAssets =
+    await Promise.all(
+      networks.map(
+        (
+          network,
+        ) =>
+          getChainAssets(
+            network.client,
+            network.name,
+            network.nativeSymbol,
+            address,
+          ),
+      ),
     );
 
+
   /*
-   * 2. Fetch Base assets
+   * 2. Flatten all network assets
+   *
+   * Before:
+   *
+   * [
+   *   [Ethereum assets],
+   *   [Base assets],
+   *   [Polygon assets]
+   * ]
+   *
+   * After:
+   *
+   * [
+   *   Ethereum asset,
+   *   Base asset,
+   *   Polygon asset
+   * ]
    */
 
-  const baseAssets =
-    await getChainAssets(
-      baseAlchemy,
-      'Base',
-      'ETH',
-      address,
-    );
+  const assets =
+    chainAssets.flat();
+
 
   /*
-   * 3. Fetch Polygon assets
-   */
-
-  const polygonAssets =
-    await getChainAssets(
-      polygonAlchemy,
-      'Polygon',
-      'POL',
-      address,
-    );
-
-  /*
-   * 4. Combine all blockchain assets
-   */
-
-  const assets = [
-    ...ethereumAssets,
-    ...baseAssets,
-    ...polygonAssets,
-  ];
-
-  /*
-   * 5. Find CoinGecko IDs
+   * 3. Find CoinGecko price IDs
    *
    * ETH → ethereum
    * USDC → usd-coin
@@ -278,8 +314,9 @@ export async function getPortfolio(
           Boolean(id),
       );
 
+
   /*
-   * 6. Fetch token prices
+   * 4. Fetch prices
    */
 
   const prices =
@@ -287,8 +324,10 @@ export async function getPortfolio(
       priceIds,
     );
 
+
   /*
-   * 7. Add prices and calculate values
+   * 5. Add prices and calculate
+   *    individual asset values
    */
 
   const pricedAssets =
@@ -301,18 +340,22 @@ export async function getPortfolio(
             asset.symbol
           ];
 
+
         const priceData =
           priceId
             ? prices[priceId]
             : undefined;
 
+
         const priceUsd =
           priceData?.usd ??
           0;
 
+
         const valueUsd =
           asset.balance *
           priceUsd;
+
 
         return {
           ...asset,
@@ -329,8 +372,9 @@ export async function getPortfolio(
       },
     );
 
+
   /*
-   * 8. Calculate total portfolio value
+   * 6. Calculate total portfolio value
    */
 
   const totalValueUsd =
@@ -345,8 +389,9 @@ export async function getPortfolio(
       0,
     );
 
+
   /*
-   * 9. Count unique networks
+   * 7. Count unique networks
    */
 
   const totalNetworks =
@@ -359,11 +404,9 @@ export async function getPortfolio(
       ),
     ).size;
 
+
   /*
-   * 10. Calculate overall 24-hour change
-   *
-   * For now, we calculate the average
-   * change of all assets.
+   * 8. Calculate average 24-hour change
    */
 
   const change24h =
@@ -381,8 +424,9 @@ export async function getPortfolio(
         pricedAssets.length
       : 0;
 
+
   /*
-   * 11. Return final portfolio
+   * 9. Return final portfolio
    */
 
   return {

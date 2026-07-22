@@ -1,25 +1,35 @@
+import {
+  ethereumAlchemy,
+  baseAlchemy,
+  polygonAlchemy,
+} from './alchemy.js';
+
 export interface NetworkConfig {
   id: string;
   name: string;
-  symbol: string;
+  nativeSymbol: string;
+  client: typeof ethereumAlchemy;
 }
 
 export const networks: NetworkConfig[] = [
   {
     id: 'ethereum',
     name: 'Ethereum',
-    symbol: 'ETH',
+    nativeSymbol: 'ETH',
+    client: ethereumAlchemy,
   },
 
   {
     id: 'base',
     name: 'Base',
-    symbol: 'ETH',
+    nativeSymbol: 'ETH',
+    client: baseAlchemy,
   },
 
   {
     id: 'polygon',
     name: 'Polygon',
-    symbol: 'POL',
+    nativeSymbol: 'POL',
+    client: polygonAlchemy,
   },
 ];
