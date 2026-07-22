@@ -573,6 +573,8 @@ npm run dev
 
 ## Phase 7 — Production Caching
 
+* [x] Redis / ElastiCache production cache support implemented
+
 Replace the current in-memory cache:
 
 ```text
@@ -594,6 +596,9 @@ Redis / ElastiCache
    ↓
 Shared Cache
 ```
+
+This repository now includes optional Redis caching for AI analysis using `REDIS_URL`.
+If Redis is unavailable, the backend falls back to the existing in-memory cache.
 
 Benefits:
 

@@ -43,47 +43,41 @@ export async function analyzePortfolioController(
 
   try {
     const cachedAnalysis =
-        getCachedAnalysis(
-            address,
-        );
-
-
-        if (
-        cachedAnalysis
-        ) {
-        return res.json(
-            cachedAnalysis,
-        );
-        }
-
-
-        const portfolio =
-        await getPortfolio(
-            address,
-        );
-
-
-        const analysis =
-        await analyzePortfolio(
-            portfolio,
-        );
-
-        await saveAnalysisHistory(
-            address,
-
-            analysis,
-        );
-
-
-        setCachedAnalysis(
+      await getCachedAnalysis(
         address,
-        analysis,
-        );
+      );
 
+    if (
+      cachedAnalysis
+    ) {
+      return res.json(
+        cachedAnalysis,
+      );
+    }
 
-        return res.json(
-        analysis,
-        );
+    const portfolio =
+      await getPortfolio(
+        address,
+      );
+
+    const analysis =
+      await analyzePortfolio(
+        portfolio,
+      );
+
+    await saveAnalysisHistory(
+      address,
+      analysis,
+    );
+
+    await setCachedAnalysis(
+      address,
+      analysis,
+    );
+
+    return res.json(
+      analysis,
+    );
   } catch (
     error
   ) {

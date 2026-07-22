@@ -1,3 +1,4 @@
+import { createClient, type RedisClientType } from 'redis';
 import type {
   AIAnalysis,
 } from '../types/ai.js';
@@ -10,24 +11,109 @@ interface CacheEntry {
 }
 
 
-const cache =
+const inMemoryCache =
   new Map<
     string,
     CacheEntry
   >();
 
+const REDIS_URL =
+  process.env.REDIS_URL;
 
-const CACHE_DURATION =
-  1000 * 60 * 5;
+const CACHE_DURATION_SECONDS =
+  Number(
+    process.env.REDIS_CACHE_TTL_SECONDS ??
+      300,
+  );
 
-export function getCachedAnalysis(
-  address: string,
-): AIAnalysis | null {
-  const entry =
-    cache.get(
-      address.toLowerCase(),
+const CACHE_DURATION_MS =
+  CACHE_DURATION_SECONDS *
+  1000;
+
+let redisClient: RedisClientType | null =
+  null;
+let redisAvailable =
+  Boolean(REDIS_URL);
+
+async function getRedisClient(): Promise<RedisClientType | null> {
+  if (
+    !redisAvailable ||
+    !REDIS_URL
+  ) {
+    return null;
+  }
+
+  if (redisClient) {
+    return redisClient;
+  }
+
+  try {
+    redisClient = createClient({
+      url: REDIS_URL,
+    });
+
+    redisClient.on(
+      'error',
+      (error) => {
+        console.error(
+          'Redis cache error:',
+          error,
+        );
+        redisAvailable = false;
+      },
     );
 
+    await redisClient.connect();
+
+    console.log(
+      'AI cache: connected to Redis',
+    );
+
+    return redisClient;
+  } catch (error) {
+    console.error(
+      'AI cache: failed to connect to Redis, falling back to in-memory cache',
+      error,
+    );
+    redisAvailable = false;
+
+    return null;
+  }
+}
+
+export async function getCachedAnalysis(
+  address: string,
+): Promise<AIAnalysis | null> {
+  const key = address.toLowerCase();
+
+  const redis = await getRedisClient();
+
+  if (redis) {
+    try {
+      const cached = await redis.get(key);
+
+      if (
+        !cached
+      ) {
+        return null;
+      }
+
+      return JSON.parse(
+        cached,
+      ) as AIAnalysis;
+    } catch (error) {
+      console.error(
+        'AI cache: failed to read from Redis, falling back to memory cache',
+        error,
+      );
+      redisAvailable = false;
+    }
+  }
+
+  const entry =
+    inMemoryCache.get(
+      key,
+    );
 
   if (
     !entry
@@ -35,34 +121,59 @@ export function getCachedAnalysis(
     return null;
   }
 
-
   if (
     Date.now() >
     entry.expiresAt
   ) {
-    cache.delete(
-      address.toLowerCase(),
+    inMemoryCache.delete(
+      key,
     );
 
     return null;
   }
 
-
   return entry.analysis;
 }
 
-export function setCachedAnalysis(
+export async function setCachedAnalysis(
   address: string,
   analysis: AIAnalysis,
-): void {
-  cache.set(
-    address.toLowerCase(),
+): Promise<void> {
+  const key = address.toLowerCase();
+
+  const redis = await getRedisClient();
+
+  if (redis) {
+    try {
+      await redis.set(
+        key,
+        JSON.stringify(
+          analysis,
+        ),
+        {
+          EX:
+            CACHE_DURATION_SECONDS,
+        },
+      );
+
+      return;
+    } catch (error) {
+      console.error(
+        'AI cache: failed to write to Redis, falling back to memory cache',
+        error,
+      );
+      redisAvailable = false;
+    }
+  }
+
+  inMemoryCache.set(
+    key,
     {
       analysis,
 
       expiresAt:
         Date.now() +
-        CACHE_DURATION,
+        CACHE_DURATION_MS,
     },
   );
 }
