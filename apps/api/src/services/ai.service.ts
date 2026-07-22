@@ -7,10 +7,13 @@ import type {
   PortfolioInsight,
 } from '../types/ai.js';
 
+import {
+  generatePortfolioExplanation,
+} from './llm.service.js';
 
-export function analyzePortfolio(
+export async function analyzePortfolio(
   portfolio: PortfolioData,
-): AIAnalysis {
+): Promise<AIAnalysis> {
   const insights:
     PortfolioInsight[] = [];
 
@@ -252,8 +255,14 @@ export function analyzePortfolio(
       : 'Your portfolio does not currently contain enough data for analysis.';
 
 
+      const aiSummary =
+  await generatePortfolioExplanation(
+    portfolio,
+  );
+
   return {
-    summary,
+    summary:
+        aiSummary,
 
     insights,
 

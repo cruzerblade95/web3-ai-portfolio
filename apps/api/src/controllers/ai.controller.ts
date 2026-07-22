@@ -40,9 +40,9 @@ export async function analyzePortfolioController(
 
 
     const analysis =
-      analyzePortfolio(
+    await analyzePortfolio(
         portfolio,
-      );
+    );
 
 
     return res.json(
