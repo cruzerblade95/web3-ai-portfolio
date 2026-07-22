@@ -28,7 +28,32 @@ interface PortfolioPromptData {
 
 export async function generatePortfolioExplanation(
   portfolio: PortfolioPromptData,
-): Promise<string> {
+): Promise<{
+  summary: string;
+
+  riskLevel:
+    | 'low'
+    | 'medium'
+    | 'high';
+
+  insights: {
+    type:
+      | 'allocation'
+      | 'diversification'
+      | 'risk'
+      | 'performance'
+      | 'general';
+
+    title: string;
+
+    description: string;
+
+    severity:
+      | 'info'
+      | 'warning'
+      | 'positive';
+  }[];
+}> {
   const portfolioData =
     JSON.stringify(
       portfolio,
@@ -38,32 +63,59 @@ export async function generatePortfolioExplanation(
 
 
   const prompt = `
-You are a Web3 portfolio analysis assistant.
+    You are a Web3 portfolio analysis assistant.
 
-Analyze the following cryptocurrency portfolio data.
+    Analyze the following cryptocurrency portfolio data.
 
-Portfolio data:
+    PORTFOLIO DATA:
+    ${portfolioData}
 
-${portfolioData}
+    Return ONLY valid JSON.
 
-Provide a concise and professional explanation.
+    The JSON must follow this exact structure:
 
-Your response should:
+    {
+    "summary": "A concise summary of the portfolio.",
+    "riskLevel": "low",
+    "insights": [
+        {
+        "type": "allocation",
+        "title": "Short insight title",
+        "description": "Detailed explanation.",
+        "severity": "info"
+        }
+    ]
+    }
 
-1. Summarize the overall portfolio.
-2. Identify the largest holdings.
-3. Mention portfolio concentration.
-4. Mention blockchain network diversification.
-5. Highlight notable changes or observations.
+    Rules:
 
-Do not invent data.
+    1. riskLevel must be exactly one of:
+    "low", "medium", or "high".
 
-Do not provide direct financial advice.
+    2. type must be exactly one of:
+    "allocation",
+    "diversification",
+    "risk",
+    "performance",
+    "general".
 
-Do not tell the user to buy or sell any asset.
+    3. severity must be exactly one of:
+    "info",
+    "warning",
+    "positive".
 
-Keep the response under 250 words.
-`;
+    4. Do not invent assets or values.
+
+    5. Do not provide direct financial advice.
+
+    6. Do not tell the user to buy or sell assets.
+
+    7. Keep the summary under 100 words.
+
+    8. Generate between 2 and 5 useful insights.
+
+    Return JSON only.
+    `;
 
 
   const requestBody = {
@@ -119,9 +171,14 @@ Keep the response under 250 words.
     );
 
 
-  return extractNovaText(
-    responseBody,
-  );
+  const text =
+    extractNovaText(
+        responseBody,
+    );
+
+    return parseAIResponse(
+    text,
+    );
 }
 
 function extractNovaText(
@@ -143,4 +200,54 @@ function extractNovaText(
       .trim() ??
     'Unable to generate AI explanation.'
   );
+}
+
+function parseAIResponse(
+  text: string,
+): {
+  summary: string;
+
+  riskLevel:
+    | 'low'
+    | 'medium'
+    | 'high';
+
+  insights: {
+    type:
+      | 'allocation'
+      | 'diversification'
+      | 'risk'
+      | 'performance'
+      | 'general';
+
+    title: string;
+
+    description: string;
+
+    severity:
+      | 'info'
+      | 'warning'
+      | 'positive';
+  }[];
+} {
+  const cleanedText =
+    text
+      .replace(
+        /```json/g,
+        '',
+      )
+      .replace(
+        /```/g,
+        '',
+      )
+      .trim();
+
+
+  const parsed =
+    JSON.parse(
+      cleanedText,
+    );
+
+
+  return parsed;
 }

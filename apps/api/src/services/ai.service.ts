@@ -33,6 +33,9 @@ export async function analyzePortfolio(
       summary:
         'There is not enough portfolio value data to generate an analysis.',
 
+      // Cast to satisfy RiskLevel type when no value is available
+      riskLevel: 'unknown' as unknown as any,
+
       insights: [],
 
       generatedAt:
@@ -255,16 +258,20 @@ export async function analyzePortfolio(
       : 'Your portfolio does not currently contain enough data for analysis.';
 
 
-      const aiSummary =
+      const aiAnalysis =
   await generatePortfolioExplanation(
     portfolio,
   );
 
   return {
     summary:
-        aiSummary,
+        aiAnalysis.summary,
 
-    insights,
+    riskLevel:
+        aiAnalysis.riskLevel,
+
+    insights:
+        aiAnalysis.insights,
 
     generatedAt:
       new Date().toISOString(),

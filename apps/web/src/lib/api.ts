@@ -39,7 +39,13 @@ export interface PortfolioInsight {
 export interface AIAnalysis {
   summary: string;
 
-  insights: PortfolioInsight[];
+  riskLevel:
+    | 'low'
+    | 'medium'
+    | 'high';
+
+  insights:
+    PortfolioInsight[];
 
   generatedAt: string;
 }

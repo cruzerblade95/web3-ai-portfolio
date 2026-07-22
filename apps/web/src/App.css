@@ -571,5 +571,29 @@ h1 span {
     .ai-error {
       color: #dc2626;
     }
+
+    .risk-badge {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .risk-badge.low {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .risk-badge.medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .risk-badge.high {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    
   }
 }

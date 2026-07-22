@@ -106,6 +106,14 @@ function AIInsights({
           </h2>
         </div>
 
+        <span
+          className={
+            `risk-badge ${analysis.riskLevel}`
+          }
+        >
+          {analysis.riskLevel.toUpperCase()}
+        </span>
+
         <span className="ai-badge">
           AI
         </span>

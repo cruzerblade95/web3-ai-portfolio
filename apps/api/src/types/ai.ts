@@ -1,22 +1,38 @@
+export type InsightType =
+  | 'allocation'
+  | 'diversification'
+  | 'risk'
+  | 'performance'
+  | 'general';
+
+
+export type InsightSeverity =
+  | 'info'
+  | 'warning'
+  | 'positive';
+
+
+export type RiskLevel =
+  | 'low'
+  | 'medium'
+  | 'high';
+
+
 export interface PortfolioInsight {
-  type:
-    | 'allocation'
-    | 'diversification'
-    | 'risk'
-    | 'general';
+  type: InsightType;
 
   title: string;
 
   description: string;
 
-  severity:
-    | 'info'
-    | 'warning'
-    | 'positive';
+  severity: InsightSeverity;
 }
+
 
 export interface AIAnalysis {
   summary: string;
+
+  riskLevel: RiskLevel;
 
   insights: PortfolioInsight[];
 
