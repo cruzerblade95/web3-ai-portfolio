@@ -13,6 +13,13 @@ Built to explore the intersection of:
 
 ---
 
+## Project Dashboard
+
+![Web3 AI Portfolio dashboard](apps/web/public/screenshots/dashboard.png)
+
+Screenshot of the modern dashboard layout and portfolio analytics.
+
+
 ## 🚀 Project Overview
 
 Web3 AI Portfolio allows users to connect their cryptocurrency wallet and receive an automated analysis of their digital assets.
