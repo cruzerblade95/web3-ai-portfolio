@@ -16,6 +16,10 @@ import {
   setCachedAnalysis,
 } from '../services/ai-cache.service.js';
 
+import {
+  saveAnalysisHistory,
+} from '../services/analysis-history.service.js';
+
 
 export async function analyzePortfolioController(
   req: Request,
@@ -62,6 +66,12 @@ export async function analyzePortfolioController(
         const analysis =
         await analyzePortfolio(
             portfolio,
+        );
+
+        await saveAnalysisHistory(
+            address,
+
+            analysis,
         );
 
 
