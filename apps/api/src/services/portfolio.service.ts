@@ -1,5 +1,7 @@
 import {
-  alchemy,
+  ethereumAlchemy,
+  baseAlchemy,
+  polygonAlchemy,
 } from '../config/alchemy.js';
 
 import type {
@@ -15,6 +17,20 @@ import {
   tokenPriceMap,
 } from './token-price-map.js';
 
+type BlockchainClient =
+  typeof ethereumAlchemy;
+
+/**
+ * Convert raw blockchain token balance
+ * into a human-readable token balance.
+ *
+ * Example:
+ *
+ * Raw balance: 2500000000
+ * Decimals: 6
+ *
+ * Result: 2500
+ */
 function formatTokenBalance(
   rawBalance: string,
   decimals: number,
@@ -41,59 +57,93 @@ function formatTokenBalance(
   );
 }
 
-export async function getPortfolio(
+/**
+ * Get all assets from one blockchain network.
+ */
+async function getChainAssets(
+  client: BlockchainClient,
+  networkName: string,
+  nativeSymbol: string,
   address: string,
-): Promise<PortfolioData> {
+): Promise<PortfolioAsset[]> {
   const assets: PortfolioAsset[] = [];
 
   /*
-   * Fetch native ETH balance
+   * 1. Get native token balance
+   *
+   * Ethereum → ETH
+   * Base → ETH
+   * Polygon → POL
    */
 
   const nativeBalance =
-    await alchemy.core.getBalance(address);
+    await client.core.getBalance(address);
 
-  const ethBalance =
+  const nativeBalanceFormatted =
     Number(
       nativeBalance.toString(),
     ) / 1e18;
 
-  if (ethBalance > 0) {
+  if (
+    nativeBalanceFormatted > 0
+  ) {
     assets.push({
-        id: 'ethereum',
-        symbol: 'ETH',
-        name: 'Ethereum',
-        network: 'Ethereum',
-        balance: ethBalance,
-        priceUsd: 0,
-        valueUsd: 0,
-        change24h: 0,
+      id:
+        `${networkName}-native`,
+
+      symbol:
+        nativeSymbol,
+
+      name:
+        nativeSymbol === 'POL'
+          ? 'Polygon'
+          : 'Ethereum',
+
+      network:
+        networkName,
+
+      balance:
+        nativeBalanceFormatted,
+
+      priceUsd:
+        0,
+
+      valueUsd:
+        0,
+
+      change24h:
+        0,
     });
-    }
+  }
 
   /*
-   * Fetch ERC-20 token balances
+   * 2. Get ERC-20 token balances
    */
 
   const balances =
-    await alchemy.core.getTokenBalances(
+    await client.core.getTokenBalances(
       address,
     );
 
+  /*
+   * 3. Remove tokens with zero/null balance
+   */
+
   const tokenBalances =
-  balances.tokenBalances.filter(
-    (
-      token,
-    ): token is typeof token & {
-      tokenBalance: string;
-    } =>
-      typeof token.tokenBalance === 'string' &&
-      token.tokenBalance !==
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-  );
+    balances.tokenBalances.filter(
+      (
+        token,
+      ): token is typeof token & {
+        tokenBalance: string;
+      } =>
+        typeof token.tokenBalance ===
+          'string' &&
+        token.tokenBalance !==
+          '0x0000000000000000000000000000000000000000000000000000000000000000',
+    );
 
   /*
-   * Fetch metadata for each token
+   * 4. Get metadata for each token
    */
 
   for (
@@ -101,7 +151,7 @@ export async function getPortfolio(
   ) {
     try {
       const metadata =
-        await alchemy.core.getTokenMetadata(
+        await client.core.getTokenMetadata(
           token.contractAddress,
         );
 
@@ -115,7 +165,8 @@ export async function getPortfolio(
         );
 
       assets.push({
-        id: token.contractAddress,
+        id:
+          `${networkName}-${token.contractAddress}`,
 
         symbol:
           metadata.symbol ??
@@ -125,15 +176,19 @@ export async function getPortfolio(
           metadata.name ??
           'Unknown Token',
 
-        network: 'Ethereum',
+        network:
+          networkName,
 
         balance,
 
-        priceUsd: 0,
+        priceUsd:
+          0,
 
-        valueUsd: 0,
+        valueUsd:
+          0,
 
-        change24h: 0,
+        change24h:
+          0,
       });
     } catch (error) {
       console.error(
@@ -143,59 +198,192 @@ export async function getPortfolio(
     }
   }
 
-  const priceIds = assets
-    .map(
-        (asset) =>
-        tokenPriceMap[asset.symbol],
-    )
-    .filter(
-        (
-        id,
-        ): id is string =>
-        Boolean(id),
+  return assets;
+}
+
+/**
+ * Get the complete multi-chain portfolio.
+ */
+export async function getPortfolio(
+  address: string,
+): Promise<PortfolioData> {
+  /*
+   * 1. Fetch Ethereum assets
+   */
+
+  const ethereumAssets =
+    await getChainAssets(
+      ethereumAlchemy,
+      'Ethereum',
+      'ETH',
+      address,
     );
 
-    const prices =
-    await getTokenPrices(priceIds);
+  /*
+   * 2. Fetch Base assets
+   */
 
-    const pricedAssets =
-    assets.map((asset) => {
+  const baseAssets =
+    await getChainAssets(
+      baseAlchemy,
+      'Base',
+      'ETH',
+      address,
+    );
+
+  /*
+   * 3. Fetch Polygon assets
+   */
+
+  const polygonAssets =
+    await getChainAssets(
+      polygonAlchemy,
+      'Polygon',
+      'POL',
+      address,
+    );
+
+  /*
+   * 4. Combine all blockchain assets
+   */
+
+  const assets = [
+    ...ethereumAssets,
+    ...baseAssets,
+    ...polygonAssets,
+  ];
+
+  /*
+   * 5. Find CoinGecko IDs
+   *
+   * ETH → ethereum
+   * USDC → usd-coin
+   * POL → matic-network
+   */
+
+  const priceIds =
+    assets
+      .map(
+        (
+          asset,
+        ) =>
+          tokenPriceMap[
+            asset.symbol
+          ],
+      )
+      .filter(
+        (
+          id,
+        ): id is string =>
+          Boolean(id),
+      );
+
+  /*
+   * 6. Fetch token prices
+   */
+
+  const prices =
+    await getTokenPrices(
+      priceIds,
+    );
+
+  /*
+   * 7. Add prices and calculate values
+   */
+
+  const pricedAssets =
+    assets.map(
+      (
+        asset,
+      ) => {
         const priceId =
-        tokenPriceMap[asset.symbol];
+          tokenPriceMap[
+            asset.symbol
+          ];
 
         const priceData =
-        priceId
+          priceId
             ? prices[priceId]
             : undefined;
 
         const priceUsd =
-        priceData?.usd ?? 0;
+          priceData?.usd ??
+          0;
 
         const valueUsd =
-        asset.balance * priceUsd;
+          asset.balance *
+          priceUsd;
 
         return {
-        ...asset,
+          ...asset,
 
-        priceUsd,
+          priceUsd,
 
-        valueUsd,
+          valueUsd,
 
-        change24h:
-            priceData?.usd_24h_change ?? 0,
+          change24h:
+            priceData
+              ?.usd_24h_change ??
+            0,
         };
-    });
+      },
+    );
 
-    const totalValueUsd =
+  /*
+   * 8. Calculate total portfolio value
+   */
+
+  const totalValueUsd =
     pricedAssets.reduce(
-        (
+      (
         total,
         asset,
-        ) =>
-        total + asset.valueUsd,
+      ) =>
+        total +
+        asset.valueUsd,
 
-        0,
+      0,
     );
+
+  /*
+   * 9. Count unique networks
+   */
+
+  const totalNetworks =
+    new Set(
+      pricedAssets.map(
+        (
+          asset,
+        ) =>
+          asset.network,
+      ),
+    ).size;
+
+  /*
+   * 10. Calculate overall 24-hour change
+   *
+   * For now, we calculate the average
+   * change of all assets.
+   */
+
+  const change24h =
+    pricedAssets.length > 0
+      ? pricedAssets.reduce(
+          (
+            total,
+            asset,
+          ) =>
+            total +
+            asset.change24h,
+
+          0,
+        ) /
+        pricedAssets.length
+      : 0;
+
+  /*
+   * 11. Return final portfolio
+   */
 
   return {
     address,
@@ -206,14 +394,12 @@ export async function getPortfolio(
       totalAssets:
         pricedAssets.length,
 
-      totalNetworks:
-        pricedAssets.length > 0
-          ? 1
-          : 0,
+      totalNetworks,
 
-      change24h: 0,
+      change24h,
     },
 
-    assets: pricedAssets,
+    assets:
+      pricedAssets,
   };
 }
