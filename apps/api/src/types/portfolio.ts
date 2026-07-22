@@ -7,6 +7,7 @@ export interface PortfolioAsset {
   priceUsd: number;
   valueUsd: number;
   change24h: number;
+  logoUrl?: string;
 }
 
 export interface PortfolioSummary {
