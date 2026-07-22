@@ -1,53 +1,74 @@
+import {
+  alchemy,
+} from '../config/alchemy.js';
+
 import type {
   PortfolioData,
+  PortfolioAsset,
 } from '../types/portfolio.js';
 
-export function getPortfolio(
+export async function getPortfolio(
   address: string,
-): PortfolioData {
+): Promise<PortfolioData> {
+  const balances =
+    await alchemy.core.getTokenBalances(
+      address,
+    );
+
+  const nativeBalance =
+    await alchemy.core.getBalance(address);
+
+  const ethBalance = Number(
+    nativeBalance.toString(),
+  ) / 1e18;
+
+  const assets: PortfolioAsset[] = [];
+
+  if (ethBalance > 0) {
+    assets.push({
+      id: 'ethereum',
+      symbol: 'ETH',
+      name: 'Ethereum',
+      network: 'Ethereum',
+      balance: ethBalance,
+      priceUsd: 0,
+      valueUsd: 0,
+      change24h: 0,
+    });
+  }
+
+  const tokenBalances =
+    balances.tokenBalances.filter(
+      (token) =>
+        token.tokenBalance !==
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+    );
+
+  for (
+    const token of tokenBalances
+  ) {
+    assets.push({
+      id: token.contractAddress,
+      symbol: 'TOKEN',
+      name: 'ERC-20 Token',
+      network: 'Ethereum',
+      balance: 0,
+      priceUsd: 0,
+      valueUsd: 0,
+      change24h: 0,
+    });
+  }
+
   return {
     address,
 
     summary: {
-      totalValueUsd: 12450.23,
-      totalAssets: 3,
-      totalNetworks: 3,
-      change24h: 3.42,
+      totalValueUsd: 0,
+      totalAssets: assets.length,
+      totalNetworks: assets.length > 0 ? 1 : 0,
+      change24h: 0,
     },
 
-    assets: [
-      {
-        id: 'ethereum',
-        symbol: 'ETH',
-        name: 'Ethereum',
-        network: 'Ethereum',
-        balance: 1.25,
-        priceUsd: 3200,
-        valueUsd: 4000,
-        change24h: 2.45,
-      },
-
-      {
-        id: 'usdc',
-        symbol: 'USDC',
-        name: 'USD Coin',
-        network: 'Base',
-        balance: 2500,
-        priceUsd: 1,
-        valueUsd: 2500,
-        change24h: 0.01,
-      },
-
-      {
-        id: 'polygon',
-        symbol: 'POL',
-        name: 'Polygon',
-        network: 'Polygon',
-        balance: 1200,
-        priceUsd: 0.5,
-        valueUsd: 600,
-        change24h: -1.23,
-      },
-    ],
+    assets,
   };
 }

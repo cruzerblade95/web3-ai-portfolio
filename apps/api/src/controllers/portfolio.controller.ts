@@ -3,9 +3,11 @@ import type {
   Response,
 } from 'express';
 
-import { getPortfolio } from '../services/portfolio.service.js';
+import {
+  getPortfolio,
+} from '../services/portfolio.service.js';
 
-export function getPortfolioController(
+export async function getPortfolioController(
   req: Request,
   res: Response,
 ) {
@@ -20,7 +22,20 @@ export function getPortfolioController(
     });
   }
 
-  const portfolio = getPortfolio(address);
+  try {
+    const portfolio =
+      await getPortfolio(address);
 
-  return res.json(portfolio);
+    return res.json(portfolio);
+  } catch (error) {
+    console.error(
+      'Failed to fetch portfolio:',
+      error,
+    );
+
+    return res.status(500).json({
+      message:
+        'Failed to fetch portfolio data',
+    });
+  }
 }
