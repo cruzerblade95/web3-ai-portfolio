@@ -8,4 +8,5 @@ export const tokenPriceMap:
     WBTC: 'wrapped-bitcoin',
     MATIC: 'matic-network',
     POL: 'matic-network',
+    TRU: 'truefi',
   };

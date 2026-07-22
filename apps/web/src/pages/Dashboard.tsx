@@ -13,6 +13,7 @@ import {
 import PortfolioSummary from '../components/portfolio/PortfolioSummary';
 import AssetTable from '../components/portfolio/AssetTable';
 import AllocationChart from '../components/portfolio/AllocationChart';
+import AIInsights from '../components/portfolio/AIInsights';
 
 function Dashboard() {
   const {
@@ -173,9 +174,13 @@ function Dashboard() {
         </section>
       </section>
 
-      <AssetTable
-        assets={portfolio.assets}
+      <AIInsights
+        address={address ?? ''}
       />
+
+        <AssetTable
+        assets={portfolio.assets}
+        />
     </main>
   );
 }

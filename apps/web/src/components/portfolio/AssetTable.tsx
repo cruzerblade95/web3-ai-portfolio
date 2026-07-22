@@ -59,16 +59,25 @@ function AssetTable({
                 </td>
 
                 <td>
-                  {asset.balance.toLocaleString()}
+                  {asset.balance.toLocaleString(
+                        'en-US',
+                        {
+                        maximumFractionDigits: 6,
+                        },
+                    )}
                 </td>
 
                 <td>
-                  ${asset.priceUsd.toLocaleString()}
+                  {asset.priceUsd > 0
+                    ? `$${asset.priceUsd.toLocaleString()}`
+                    : '—'}
                 </td>
 
                 <td>
                   <strong>
-                    ${asset.valueUsd.toLocaleString()}
+                    {asset.valueUsd > 0
+                        ? `$${asset.valueUsd.toLocaleString()}`
+                        : '—'}
                   </strong>
                 </td>
 

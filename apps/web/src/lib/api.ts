@@ -17,3 +17,49 @@ export async function fetchPortfolio(
 
   return response.json();
 }
+
+export interface PortfolioInsight {
+  type:
+    | 'allocation'
+    | 'diversification'
+    | 'risk'
+    | 'general';
+
+  title: string;
+
+  description: string;
+
+  severity:
+    | 'info'
+    | 'warning'
+    | 'positive';
+}
+
+
+export interface AIAnalysis {
+  summary: string;
+
+  insights: PortfolioInsight[];
+
+  generatedAt: string;
+}
+
+
+export async function fetchAIAnalysis(
+  address: string,
+): Promise<AIAnalysis> {
+  const response =
+    await fetch(
+      `http://localhost:3001/api/ai/portfolio/${address}`,
+    );
+
+
+  if (!response.ok) {
+    throw new Error(
+      'Failed to fetch AI analysis',
+    );
+  }
+
+
+  return response.json();
+}

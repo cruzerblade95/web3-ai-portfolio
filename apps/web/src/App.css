@@ -496,5 +496,80 @@ h1 span {
         transform: rotate(360deg);
       }
     }
+
+    .ai-insights-card {
+      margin-top: 24px;
+    }
+
+    .ai-badge {
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: #111827;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ai-summary {
+      margin: 20px 0;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .ai-insights-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .ai-insight {
+      display: flex;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #f9fafb;
+    }
+
+    .ai-insight-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .ai-insight h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .ai-insight p {
+      margin: 0;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .ai-insight.warning {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .ai-insight.positive {
+      border-left: 4px solid #10b981;
+    }
+
+    .ai-insight.info {
+      border-left: 4px solid #3b82f6;
+    }
+
+    .ai-loading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #6b7280;
+    }
+
+    .ai-error {
+      color: #dc2626;
+    }
   }
 }

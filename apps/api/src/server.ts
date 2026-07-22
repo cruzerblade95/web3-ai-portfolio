@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import express from 'express';
 import cors from 'cors';
+import aiRoutes from './routes/ai.routes.js';
 
 import portfolioRoutes from './routes/portfolio.routes.js';
 
@@ -26,6 +27,11 @@ app.get(
 app.use(
   '/api/portfolio',
   portfolioRoutes,
+);
+
+app.use(
+  '/api/ai',
+  aiRoutes,
 );
 
 app.listen(
