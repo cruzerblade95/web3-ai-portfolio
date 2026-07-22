@@ -433,6 +433,18 @@ Returns previous AI analyses stored in DynamoDB.
 
 ---
 
+## Portfolio Update Stream
+
+```http
+GET /api/portfolio/:address/stream
+```
+
+Sends a real-time server-sent event stream of portfolio updates.
+
+Each event includes the latest portfolio data for the requested wallet address.
+
+---
+
 # 🔐 Environment Variables
 
 Create:
@@ -611,6 +623,8 @@ Benefits:
 
 ## Phase 8 — Real-Time Portfolio Updates
 
+* [x] Server-Sent Events portfolio streaming implemented
+
 Add:
 
 * WebSocket support
@@ -626,7 +640,7 @@ Event Listener
        ↓
 Backend
        ↓
-WebSocket
+WebSocket / SSE
        ↓
 React Dashboard
 ```

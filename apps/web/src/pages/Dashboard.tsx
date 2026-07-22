@@ -1,5 +1,11 @@
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
 import {
   useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
 
 import {
@@ -20,6 +26,12 @@ function Dashboard() {
     address,
     isConnected,
   } = useAccount();
+
+  const [isRealtimeActive, setIsRealtimeActive] =
+    useState(false);
+
+  const queryClient =
+    useQueryClient();
 
   const {
     data: portfolio,
@@ -44,6 +56,73 @@ function Dashboard() {
 
     enabled: isConnected && !!address,
   });
+
+  React.useEffect(() => {
+    if (
+      !address ||
+      !isConnected
+    ) {
+      return undefined;
+    }
+
+    const source = new EventSource(
+      `http://localhost:3001/api/portfolio/${address}/stream`,
+    );
+
+    source.addEventListener(
+      'open',
+      () => {
+        setIsRealtimeActive(true);
+      },
+    );
+
+    source.addEventListener(
+      'portfolio-update',
+      async (event) => {
+        try {
+          const portfolioUpdate =
+            JSON.parse(
+              (event as MessageEvent)
+                .data,
+            );
+          queryClient.setQueryData(
+            ['portfolio', address],
+            portfolioUpdate,
+          );
+        } catch (error) {
+          console.error(
+            'Failed to parse portfolio update',
+            error,
+          );
+        }
+      },
+    );
+
+    source.addEventListener(
+      'error',
+      () => {
+        setIsRealtimeActive(false);
+      },
+    );
+
+    source.onerror = (error) => {
+      console.error(
+        'Portfolio stream error',
+        error,
+      );
+      setIsRealtimeActive(false);
+      source.close();
+    };
+
+    return () => {
+      setIsRealtimeActive(false);
+      source.close();
+    };
+  }, [
+    address,
+    isConnected,
+    queryClient,
+  ]);
 
   if (!isConnected) {
     return (
@@ -128,6 +207,18 @@ function Dashboard() {
             Track and understand your multi-chain
             digital asset portfolio.
           </p>
+        </div>
+
+        <div
+          className={`realtime-badge ${
+            isRealtimeActive
+              ? 'active'
+              : 'inactive'
+          }`}
+        >
+          {isRealtimeActive
+            ? 'Live updates active'
+            : 'Real-time offline'}
         </div>
       </div>
 
