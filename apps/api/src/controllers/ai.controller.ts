@@ -11,6 +11,11 @@ import {
   analyzePortfolio,
 } from '../services/ai.service.js';
 
+import {
+  getCachedAnalysis,
+  setCachedAnalysis,
+} from '../services/ai-cache.service.js';
+
 
 export async function analyzePortfolioController(
   req: Request,
@@ -33,21 +38,42 @@ export async function analyzePortfolioController(
 
 
   try {
-    const portfolio =
-      await getPortfolio(
+    const cachedAnalysis =
+        getCachedAnalysis(
+            address,
+        );
+
+
+        if (
+        cachedAnalysis
+        ) {
+        return res.json(
+            cachedAnalysis,
+        );
+        }
+
+
+        const portfolio =
+        await getPortfolio(
+            address,
+        );
+
+
+        const analysis =
+        await analyzePortfolio(
+            portfolio,
+        );
+
+
+        setCachedAnalysis(
         address,
-      );
+        analysis,
+        );
 
 
-    const analysis =
-    await analyzePortfolio(
-        portfolio,
-    );
-
-
-    return res.json(
-      analysis,
-    );
+        return res.json(
+        analysis,
+        );
   } catch (
     error
   ) {

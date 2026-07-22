@@ -16,23 +16,34 @@ function AIInsights({
   address,
 }: AIInsightsProps) {
   const {
-    data: analysis,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: [
-      'ai-analysis',
+  data: analysis,
+  isLoading,
+  isError,
+  refetch,
+  isFetching,
+} = useQuery({
+  queryKey: [
+    'ai-analysis',
+    address,
+  ],
+
+  queryFn: () =>
+    fetchAIAnalysis(
       address,
-    ],
+    ),
 
-    queryFn: () =>
-      fetchAIAnalysis(
-        address,
-      ),
+  enabled:
+    !!address,
 
-    enabled:
-      !!address,
-  });
+  staleTime:
+    1000 * 60 * 5,
+
+  gcTime:
+    1000 * 60 * 30,
+
+  refetchOnWindowFocus:
+    false,
+});
 
 
   if (isLoading) {
@@ -106,17 +117,29 @@ function AIInsights({
           </h2>
         </div>
 
-        <span
-          className={
-            `risk-badge ${analysis.riskLevel}`
-          }
-        >
-          {analysis.riskLevel.toUpperCase()}
-        </span>
+        <div className="ai-actions">
+          <span
+            className={
+              `risk-badge ${analysis.riskLevel}`
+            }
+          >
+            {analysis.riskLevel.toUpperCase()}
+          </span>
 
-        <span className="ai-badge">
-          AI
-        </span>
+          <button
+            className="refresh-ai-button"
+            onClick={() =>
+              refetch()
+            }
+            disabled={
+              isFetching
+            }
+          >
+            {isFetching
+              ? 'Analyzing...'
+              : 'Refresh'}
+          </button>
+        </div>
       </div>
 
 
