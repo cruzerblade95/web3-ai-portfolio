@@ -206,4 +206,14 @@ h1 span {
   .main-content {
     padding: 60px 24px;
   }
+
+  .wallet-info {
+    margin-top: 40px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #a1a1aa;
+    word-break: break-all;
+  }
 }

@@ -1,6 +1,15 @@
 import './App.css';
+import ConnectWallet from './components/wallet/ConnectWallet';
+import { useAccount, useChainId } from 'wagmi';
 
 function App() {
+  const {
+    address,
+    isConnected,
+  } = useAccount();
+
+  const chainId = useChainId();
+
   return (
     <div className="app">
       <header className="navbar">
@@ -9,9 +18,7 @@ function App() {
           <span>Web3 AI Portfolio</span>
         </div>
 
-        <button className="connect-button">
-          Connect Wallet
-        </button>
+        <ConnectWallet />
       </header>
 
       <main className="main-content">
@@ -29,9 +36,7 @@ function App() {
               and use AI to understand your portfolio.
             </p>
 
-            <button className="primary-button">
-              Connect Wallet
-            </button>
+            <ConnectWallet />
           </div>
 
           <div className="hero-card">
@@ -56,6 +61,13 @@ function App() {
             </div>
           </div>
         </section>
+
+        {isConnected && address && (
+          <section className="wallet-info">
+            <p>Wallet: {address}</p>
+            <p>Chain ID: {chainId}</p>
+          </section>
+        )}
 
         <section className="features-section">
           <div className="feature-card">
