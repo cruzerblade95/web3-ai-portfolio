@@ -7,6 +7,14 @@ import type {
   PortfolioAsset,
 } from '../types/portfolio.js';
 
+import {
+  getTokenPrices,
+} from './price.service.js';
+
+import {
+  tokenPriceMap,
+} from './token-price-map.js';
+
 function formatTokenBalance(
   rawBalance: string,
   decimals: number,
@@ -52,16 +60,16 @@ export async function getPortfolio(
 
   if (ethBalance > 0) {
     assets.push({
-      id: 'ethereum',
-      symbol: 'ETH',
-      name: 'Ethereum',
-      network: 'Ethereum',
-      balance: ethBalance,
-      priceUsd: 0,
-      valueUsd: 0,
-      change24h: 0,
+        id: 'ethereum',
+        symbol: 'ETH',
+        name: 'Ethereum',
+        network: 'Ethereum',
+        balance: ethBalance,
+        priceUsd: 0,
+        valueUsd: 0,
+        change24h: 0,
     });
-  }
+    }
 
   /*
    * Fetch ERC-20 token balances
@@ -135,23 +143,77 @@ export async function getPortfolio(
     }
   }
 
+  const priceIds = assets
+    .map(
+        (asset) =>
+        tokenPriceMap[asset.symbol],
+    )
+    .filter(
+        (
+        id,
+        ): id is string =>
+        Boolean(id),
+    );
+
+    const prices =
+    await getTokenPrices(priceIds);
+
+    const pricedAssets =
+    assets.map((asset) => {
+        const priceId =
+        tokenPriceMap[asset.symbol];
+
+        const priceData =
+        priceId
+            ? prices[priceId]
+            : undefined;
+
+        const priceUsd =
+        priceData?.usd ?? 0;
+
+        const valueUsd =
+        asset.balance * priceUsd;
+
+        return {
+        ...asset,
+
+        priceUsd,
+
+        valueUsd,
+
+        change24h:
+            priceData?.usd_24h_change ?? 0,
+        };
+    });
+
+    const totalValueUsd =
+    pricedAssets.reduce(
+        (
+        total,
+        asset,
+        ) =>
+        total + asset.valueUsd,
+
+        0,
+    );
+
   return {
     address,
 
     summary: {
-      totalValueUsd: 0,
+      totalValueUsd,
 
       totalAssets:
-        assets.length,
+        pricedAssets.length,
 
       totalNetworks:
-        assets.length > 0
+        pricedAssets.length > 0
           ? 1
           : 0,
 
       change24h: 0,
     },
 
-    assets,
+    assets: pricedAssets,
   };
 }
